@@ -14,7 +14,11 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-export default function Page() {
+export default function BureausLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -41,6 +45,7 @@ export default function Page() {
             </Breadcrumb>
           </div>
         </header>
+        <main className='flex flex-1 flex-col gap-4 p-4'>{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
