@@ -22,27 +22,31 @@ import { getOptionsForLabel } from '@/lib/label-utils';
 import type { Label as LabelType } from '@/lib/types';
 import { LabelSelectField } from './label-select-field';
 import { toast } from 'sonner';
-import { Checkbox } from './ui/checkbox';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { addInGoingLetter } from '@/app/actions/letter-actions';
+import {
+  getInGoingLetterOptions,
+  addOutGoingLetter,
+} from '@/app/actions/letter-actions';
 
-export default function AddInGoingLetterDialog() {
+interface LetterOption {
+  id: string;
+  name: string;
+}
+
+export default function AddOutGoingLetterDialog() {
   const [open, setOpen] = useState(false);
   const [labels, setLabels] = useState<LabelType[]>([]);
-  const [letterName, setLetterName] = useState('');
-  const [letterType, setLetterType] = useState('request');
+  const [inGoingLetters, setInGoingLetters] = useState<LetterOption[]>([]);
+  const [requestLetterId, setRequestLetterId] = useState('');
+  const [responseLetterName, setResponseLetterName] = useState('');
   const [bureauOptionId, setBureauOptionId] = useState('');
-  const [receivedDate, setReceivedDate] = useState<Date | undefined>(
-    new Date(),
-  );
-  const [noResponseNeeded, setNoResponseNeeded] = useState(false);
+  const [sentDate, setSentDate] = useState<Date | undefined>(new Date());
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,46 +54,46 @@ export default function AddInGoingLetterDialog() {
   useEffect(() => {
     if (open) {
       getLabels().then(setLabels);
+      getInGoingLetterOptions().then(setInGoingLetters);
     }
   }, [open]);
 
   const bureauOptions = getOptionsForLabel(labels, 'bureau');
 
   const resetForm = () => {
-    setLetterName('');
-    setLetterType('request');
+    setRequestLetterId('');
+    setResponseLetterName('');
     setBureauOptionId('');
-    setReceivedDate(new Date());
-    setNoResponseNeeded(false);
+    setSentDate(new Date());
     setFile(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!letterName.trim()) {
-      toast.error('Letter name is required');
+    if (!requestLetterId) {
+      toast.error('Please select a request letter');
+      return;
+    }
+    if (!responseLetterName.trim()) {
+      toast.error('Response letter name is required');
       return;
     }
 
     startTransition(async () => {
       const formData = new FormData();
-      formData.set('name', letterName);
-      formData.set('type', letterType);
+      formData.set('requestLetterId', requestLetterId);
+      formData.set('responseLetterName', responseLetterName);
       formData.set('bureauOptionId', bureauOptionId);
-      formData.set(
-        'receivedDate',
-        receivedDate ? receivedDate.toISOString() : '',
-      );
-      formData.set('noResponseNeeded', String(noResponseNeeded));
+      formData.set('sentDate', sentDate ? sentDate.toISOString() : '');
       if (file) {
         formData.set('file', file);
       }
 
-      const result = await addInGoingLetter(formData);
+      const result = await addOutGoingLetter(formData);
 
       if (result.success) {
-        toast.success('Letter added');
+        toast.success('Outgoing letter saved');
         resetForm();
         setOpen(false);
       } else {
@@ -102,69 +106,54 @@ export default function AddInGoingLetterDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Plus className='w-4 h-4' /> Add In-Going Letter
+          <Plus className='w-4 h-4' /> Add Out-Going Letter
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-lg'>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add In-Going Letter</DialogTitle>
+            <DialogTitle>Add Out-Going Letter</DialogTitle>
             <DialogDescription>
-              Record a new incoming letter for tracking.
+              Record a response to an existing in-going letter.
             </DialogDescription>
           </DialogHeader>
 
           <FieldGroup className='py-4'>
             <Field>
-              <FieldLabel htmlFor='letter-file'>Letter File</FieldLabel>
-              <div className='flex items-center gap-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className='w-4 h-4' /> Browse file
-                </Button>
-                <span className='text-xs text-muted-foreground truncate'>
-                  {file ? file.name : 'No file selected'}
-                </span>
-              </div>
-              <Input
-                id='letter-file'
-                ref={fileInputRef}
-                type='file'
-                accept='image/*,application/pdf'
-                className='hidden'
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-              <FieldDescription>
-                Select a picture or pdf to upload.
-              </FieldDescription>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor='letter-name'>Letter Name</FieldLabel>
-              <Input
-                id='letter-name'
-                value={letterName}
-                onChange={(e) => setLetterName(e.target.value)}
-                placeholder='e.g. Request for Training Support'
-              />
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor='letter-type'>Letter Type</FieldLabel>
-              <Select value={letterType} onValueChange={setLetterType}>
-                <SelectTrigger id='letter-type'>
-                  <SelectValue placeholder='Select a type' />
+              <FieldLabel htmlFor='request-letter'>Request Letter</FieldLabel>
+              <Select
+                value={requestLetterId}
+                onValueChange={setRequestLetterId}
+              >
+                <SelectTrigger id='request-letter'>
+                  <SelectValue placeholder='Please select the request letter' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value='request'>Request</SelectItem>
-                    <SelectItem value='invitation'>Invitation</SelectItem>
-                  </SelectGroup>
+                  {inGoingLetters.length === 0 ? (
+                    <SelectItem value=''>
+                      No in-going letters available
+                    </SelectItem>
+                  ) : (
+                    inGoingLetters.map((letter) => (
+                      <SelectItem key={letter.id} value={letter.id}>
+                        {letter.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor='response-letter-name'>
+                Response Letter Name
+              </FieldLabel>
+              <Input
+                id='response-letter-name'
+                value={responseLetterName}
+                onChange={(e) => setResponseLetterName(e.target.value)}
+                placeholder='e.g. Approval for Training Support'
+              />
             </Field>
 
             <Field>
@@ -180,17 +169,17 @@ export default function AddInGoingLetterDialog() {
             </Field>
 
             <Field>
-              <FieldLabel htmlFor='letter-received'>Received</FieldLabel>
+              <FieldLabel htmlFor='letter-sent'>Sent</FieldLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant='outline'
-                    id='letter-received'
+                    id='letter-sent'
                     className='justify-start px-2.5 font-normal'
                   >
                     <CalendarIcon />
-                    {receivedDate ? (
-                      format(receivedDate, 'LLL dd, y')
+                    {sentDate ? (
+                      format(sentDate, 'LLL dd, y')
                     ) : (
                       <span>Pick a date</span>
                     )}
@@ -199,22 +188,39 @@ export default function AddInGoingLetterDialog() {
                 <PopoverContent className='w-auto p-0' align='start'>
                   <Calendar
                     mode='single'
-                    selected={receivedDate}
-                    onSelect={setReceivedDate}
+                    selected={sentDate}
+                    onSelect={setSentDate}
                   />
                 </PopoverContent>
               </Popover>
             </Field>
 
-            <div className='flex flex-row items-center gap-2'>
-              <Checkbox
-                checked={noResponseNeeded}
-                onCheckedChange={(checked) =>
-                  setNoResponseNeeded(checked === true)
-                }
+            <Field>
+              <FieldLabel htmlFor='response-file'>Response File</FieldLabel>
+              <div className='flex items-center gap-2'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className='w-4 h-4' /> Browse file
+                </Button>
+                <span className='text-xs text-muted-foreground truncate'>
+                  {file ? file.name : 'No file selected'}
+                </span>
+              </div>
+              <Input
+                id='response-file'
+                ref={fileInputRef}
+                type='file'
+                accept='image/*,application/pdf'
+                className='hidden'
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
-              No response needed?
-            </div>
+              <FieldDescription>
+                Select a picture or pdf to upload.
+              </FieldDescription>
+            </Field>
           </FieldGroup>
 
           <DialogFooter>

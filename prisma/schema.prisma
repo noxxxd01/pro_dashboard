@@ -40,6 +40,9 @@ model Option {
   asTarget Target[] @relation("TargetBureau")
   asTargetProject Target[] @relation("TargetProject")
   asSupplyCategory Supply[] @relation("SupplyCategory")
+  asLetterBureau Letter[] @relation("LetterBureau")
+  asOutGoingLetterBureau OutGoingLetter[] @relation("OutGoingLetterBureau")
+
 }
 
 model OptionRelation {
@@ -137,4 +140,58 @@ model ReleasedSupply {
   releasedDate     DateTime @default(now())
   requesteeName    String
   createdAt        DateTime @default(now())
+}
+
+model Letter {
+  id               String    @id @default(cuid())
+  name             String
+  type             String
+  fileUrl          String?
+  bureau           Option?   @relation("LetterBureau", fields: [bureauOptionId], references: [id])
+  bureauOptionId   String?
+  receivedDate     DateTime?
+  status           String    @default("Received")
+  response         String    @default("-")
+  noResponseNeeded Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  outGoingResponses OutGoingLetter[]
+}
+
+model OutGoingLetter {
+  id                 String    @id @default(cuid())
+  requestLetter      Letter    @relation(fields: [requestLetterId], references: [id])
+  requestLetterId    String
+  responseLetterName String
+  bureau             Option?   @relation("OutGoingLetterBureau", fields: [bureauOptionId], references: [id])
+  bureauOptionId     String?
+  sentDate           DateTime?
+  fileUrl            String?
+  status             String    @default("Pending")
+  createdAt          DateTime  @default(now())
+}
+
+model Student {
+  id            String   @id @default(cuid())
+  fullName      String
+  studentNumber String   @unique
+  school        String
+  targetHours   Int
+  email         String
+  phoneNumber   String
+  createdAt     DateTime @default(now())
+  attendanceLogs AttendanceLog[]
+}
+
+model AttendanceLog {
+  id            String    @id @default(cuid())
+  student       Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId     String
+  date          DateTime  @default(now())
+  timeIn        DateTime?
+  breakIn       DateTime?
+  breakOut      DateTime?
+  timeOut       DateTime?
+  hoursRendered Float     @default(0)
+  status        String    @default("Present")
+  createdAt     DateTime  @default(now())
 }

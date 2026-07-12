@@ -1,0 +1,16 @@
+-- CreateTable
+CREATE TABLE "Student" (
+    "id" TEXT NOT NULL,
+    "fullName" TEXT NOT NULL,
+    "studentNumber" TEXT NOT NULL,
+    "school" TEXT NOT NULL,
+    "targetHours" INTEGER NOT NULL,
+    "email" TEXT NOT NULL,
+    "phoneNumber" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Student_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Student_studentNumber_key" ON "Student"("studentNumber");
