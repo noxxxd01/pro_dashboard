@@ -58,7 +58,6 @@ model Activity {
   id              String   @id @default(cuid())
   activityName    String
   activityVenue   String?
-  indicator       String?
   barangay        String?
   dateFrom        DateTime?
   dateTo          DateTime?
@@ -90,6 +89,7 @@ model Activity {
 
   targetSectors       ActivityTargetSector[]
   responsiblePersons  ActivityResponsiblePerson[]
+  indicators          ActivityIndicator[]
 }
 
 model ActivityTargetSector {
@@ -98,6 +98,13 @@ model ActivityTargetSector {
   activityId String
   option     Option   @relation("ActivityTargetSectorOption", fields: [optionId], references: [id])
   optionId   String
+}
+
+model ActivityIndicator {
+  id         String   @id @default(cuid())
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  activityId String
+  name       String
 }
 
 model ActivityResponsiblePerson {
@@ -109,15 +116,18 @@ model ActivityResponsiblePerson {
 }
 
 model Target {
-  id              String  @id @default(cuid())
-  name            String
-  value           Int
-  semester        String
-  bureau          Option  @relation("TargetBureau", fields: [bureauOptionId], references: [id])
-  bureauOptionId  String
-  project         Option? @relation("TargetProject", fields: [projectOptionId], references: [id])
-  projectOptionId String?
-  createdAt       DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  target1stDistrict Int
+  target2ndDistrict Int
+  semester          String
+  year              Int
+  measurementType   String   @default("activities")
+  bureau            Option   @relation("TargetBureau", fields: [bureauOptionId], references: [id])
+  bureauOptionId    String
+  project           Option?  @relation("TargetProject", fields: [projectOptionId], references: [id])
+  projectOptionId   String?
+  createdAt         DateTime @default(now())
 }
 
 model Supply {
@@ -170,6 +180,24 @@ model OutGoingLetter {
   createdAt          DateTime  @default(now())
 }
 
+model Bill {
+  id                String    @id @default(cuid())
+  billName          String
+  billingType       String    @default("Electricity Bill")
+  fileUrl           String?
+  amount            Float
+  location          String
+  dateReceived      DateTime?
+  dueDate           DateTime?
+  disconnectionDate DateTime?
+  status            Boolean   @default(false)
+  datePaid          DateTime?
+  remarks           String?
+  orLabel           String?
+  orFileUrl         String?
+  createdAt         DateTime  @default(now())
+}
+
 model Student {
   id            String   @id @default(cuid())
   fullName      String
@@ -194,4 +222,13 @@ model AttendanceLog {
   hoursRendered Float     @default(0)
   status        String    @default("Present")
   createdAt     DateTime  @default(now())
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  action     String
+  entityType String
+  entityId   String?
+  summary    String
+  createdAt  DateTime @default(now())
 }

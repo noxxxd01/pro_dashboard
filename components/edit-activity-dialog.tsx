@@ -22,7 +22,7 @@ import { Calendar } from "./ui/calendar";
 import { type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { Input } from "./ui/input";
-import type { Label as LabelType } from "@/lib/types";
+import type { Label as LabelType, OptionSummary } from "@/lib/types";
 import { getLabels } from "@/app/actions/label-action";
 import { getOptionsForLabel } from "@/lib/label-utils";
 import { useDependentOptions } from "@/hooks/use-dependent-options";
@@ -32,6 +32,7 @@ import {
   getActivityById,
   updateActivity,
 } from "@/app/actions/activity-actions";
+import { getIndicatorsForBureauProject } from "@/app/actions/target-actions";
 import { toast } from "sonner";
 import { useTransition } from "react";
 
@@ -51,7 +52,6 @@ export function EditActivityDialog({
   const [isPending, startTransition] = useTransition();
 
   const [date, setDate] = useState<DateRange | undefined>(undefined);
-  const [indicator, setIndicator] = useState("");
   const [activityName, setActivityName] = useState("");
   const [activityVenue, setActivityVenue] = useState("");
   const [barangay, setBarangay] = useState("");
@@ -70,9 +70,24 @@ export function EditActivityDialog({
   const [selectedResponsiblePerson, setSelectedResponsiblePerson] = useState<
     string[]
   >([]);
+  const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
 
   const project = useDependentOptions(bureauOptionId);
   const municipality = useDependentOptions(districtOptionId);
+
+  const [indicatorOptions, setIndicatorOptions] = useState<OptionSummary[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (!bureauOptionId) {
+      setIndicatorOptions([]);
+      return;
+    }
+    getIndicatorsForBureauProject(bureauOptionId, project.selectedId).then(
+      setIndicatorOptions,
+    );
+  }, [bureauOptionId, project.selectedId]);
 
   const bureauOptions = getOptionsForLabel(labels, "bureau");
   const districtOptions = getOptionsForLabel(labels, "district");
@@ -80,7 +95,7 @@ export function EditActivityDialog({
     labels,
     "requesting agency",
   );
-  const targetSectorOptions = getOptionsForLabel(labels, "target sectors");
+  const targetSectorOptions = getOptionsForLabel(labels, "target sector");
   const modeOfImplementationOptions = getOptionsForLabel(
     labels,
     "mode of implementation",
@@ -100,6 +115,7 @@ export function EditActivityDialog({
     };
   const toggleTargetSector = toggleInArray(setSelectedTargetSectors);
   const toggleResponsiblePerson = toggleInArray(setSelectedResponsiblePerson);
+  const toggleIndicator = toggleInArray(setSelectedIndicators);
 
   // Load labels + the activity's current values whenever the dialog opens
   useEffect(() => {
@@ -115,7 +131,7 @@ export function EditActivityDialog({
             from: activity.dateFrom ?? undefined,
             to: activity.dateTo ?? undefined,
           });
-          setIndicator(activity.indicator ?? "");
+          setSelectedIndicators(activity.indicators.map((i) => i.name));
           setActivityName(activity.activityName);
           setActivityVenue(activity.activityVenue ?? "");
           setBarangay(activity.barangay ?? "");
@@ -154,7 +170,7 @@ export function EditActivityDialog({
         id: activityId,
         activityName,
         activityVenue,
-        indicator,
+        selectedIndicators,
         barangay,
         dateFrom: date?.from,
         dateTo: date?.to,
@@ -269,11 +285,16 @@ export function EditActivityDialog({
                 <FieldGroup className="grid grid-cols-3 gap-4">
                   <Field>
                     <FieldLabel htmlFor="edit-indicator">Indicator</FieldLabel>
-                    <Input
-                      id="edit-indicator"
-                      value={indicator}
-                      onChange={(e) => setIndicator(e.target.value)}
-                      className="bg-white"
+                    <MultiSelectField
+                      options={indicatorOptions}
+                      selectedIds={selectedIndicators}
+                      onToggle={toggleIndicator}
+                      placeholder={
+                        bureauOptionId
+                          ? "Select indicators"
+                          : "Select a bureau first"
+                      }
+                      emptyLabel="No indicators available"
                     />
                   </Field>
                   <Field className="col-span-2">

@@ -1,6 +1,14 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Cell, XAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   Card,
   CardContent,
@@ -65,13 +73,17 @@ export function TargetChartCard({
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={chartData}>
+          <BarChart accessibilityLayer data={chartData} margin={{ top: 20 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="label"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+            />
+            <YAxis
+              hide
+              domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.25) || 1]}
             />
             <ChartTooltip
               cursor={false}
@@ -81,6 +93,12 @@ export function TargetChartCard({
               {chartData.map((entry) => (
                 <Cell key={entry.label} fill={`var(--color-${entry.label})`} />
               ))}
+              <LabelList
+                position="top"
+                offset={12}
+                className="fill-foreground"
+                fontSize={12}
+              />
             </Bar>
           </BarChart>
         </ChartContainer>

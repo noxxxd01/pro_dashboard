@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-import { FilterIcon } from "lucide-react";
+import { FilterIcon, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,27 +24,68 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - 2 + i);
+
 export default function FilterTerm() {
-  const [position, setPosition] = React.useState("bottom");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const year = searchParams.get("year") ?? "";
+  const semester = searchParams.get("semester") ?? "";
+  const hasActiveFilter = Boolean(year || semester);
+
+  const updateParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    }
+    params.set("page", "1");
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleYearChange = (value: string) => {
+    updateParams({ year: value });
+  };
+
+  const handleSemesterChange = (value: string) => {
+    updateParams({
+      semester: value,
+      year: year || String(CURRENT_YEAR),
+    });
+  };
+
+  const clearFilter = () => {
+    updateParams({ year: null, semester: null });
+  };
+
   return (
     <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">
+          <Button variant={hasActiveFilter ? "default" : "outline"}>
             <FilterIcon className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuGroup>
-            <DropdownMenuItem>
-              <Select>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Select value={year} onValueChange={handleYearChange}>
                 <SelectTrigger className="w-full max-w-48">
                   <SelectValue placeholder="Select a year" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Year</SelectLabel>
-                    <SelectItem value="2026">2026</SelectItem>
+                    {YEAR_OPTIONS.map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -54,8 +95,8 @@ export default function FilterTerm() {
           <DropdownMenuGroup>
             <DropdownMenuLabel>Term</DropdownMenuLabel>
             <DropdownMenuRadioGroup
-              value={position}
-              onValueChange={setPosition}
+              value={semester}
+              onValueChange={handleSemesterChange}
             >
               <DropdownMenuRadioItem value="1st">
                 1st semester
@@ -65,6 +106,16 @@ export default function FilterTerm() {
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
+          {hasActiveFilter && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onSelect={clearFilter}>
+                  <X className="h-4 w-4" /> Clear filter
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

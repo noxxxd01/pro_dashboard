@@ -327,9 +327,9 @@ export default function OJTDashboard({ logs: initialLogs }: OJTDashboardProps) {
         </CardHeader>
         <CardContent>
           {chartData.length === 0 ? (
-            <p className='text-sm text-muted-foreground text-center py-8'>
+            <CardDescription className='text-center py-8'>
               No data available.
-            </p>
+            </CardDescription>
           ) : (
             <ChartContainer config={chartConfig} className='h-60 w-full'>
               <BarChart

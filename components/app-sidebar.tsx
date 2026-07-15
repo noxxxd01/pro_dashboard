@@ -14,9 +14,6 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import {
-  GalleryVerticalEndIcon,
-  AudioLinesIcon,
-  TerminalIcon,
   TerminalSquareIcon,
   BotIcon,
   BookOpenIcon,
@@ -36,23 +33,6 @@ const data = {
     email: 'm@example.com',
     avatar: '/avatars/shadcn.jpg',
   },
-  teams: [
-    {
-      name: 'Acme Inc',
-      logo: <GalleryVerticalEndIcon />,
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: <AudioLinesIcon />,
-      plan: 'Startup',
-    },
-    {
-      name: 'Evil Corp.',
-      logo: <TerminalIcon />,
-      plan: 'Free',
-    },
-  ],
   navMain: [
     {
       title: 'Bureaus',
@@ -129,7 +109,7 @@ const data = {
     },
     {
       name: 'Logs',
-      url: '#',
+      url: '/logs',
       icon: <Logs />,
     },
   ],
@@ -139,7 +119,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible='icon' {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />

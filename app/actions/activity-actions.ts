@@ -1,12 +1,12 @@
-"use server";
+'use server';
 
-import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 interface AddActivityInput {
   activityName: string;
   activityVenue?: string;
-  indicator?: string;
+  selectedIndicators: string[];
   barangay?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -26,7 +26,7 @@ interface AddActivityInput {
 
 export async function addActivity(input: AddActivityInput) {
   if (!input.activityName.trim()) {
-    return { success: false, error: "Activity name is required" };
+    return { success: false, error: 'Activity name is required' };
   }
 
   try {
@@ -34,7 +34,6 @@ export async function addActivity(input: AddActivityInput) {
       data: {
         activityName: input.activityName,
         activityVenue: input.activityVenue || null,
-        indicator: input.indicator || null,
         barangay: input.barangay || null,
         dateFrom: input.dateFrom ?? null,
         dateTo: input.dateTo ?? null,
@@ -56,32 +55,41 @@ export async function addActivity(input: AddActivityInput) {
             optionId,
           })),
         },
+        indicators: {
+          create: input.selectedIndicators.map((name) => ({ name })),
+        },
       },
     });
 
-    revalidatePath("/");
+    revalidatePath('/');
     return { success: true, activity };
   } catch (error) {
-    console.error("addActivity error:", error);
-    return { success: false, error: "Failed to save activity" };
+    console.error('addActivity error:', error);
+    return { success: false, error: 'Failed to save activity' };
   }
 }
 
 const PAGE_SIZE = 10;
 
-export async function getActivities(bureauName?: string, page: number = 1) {
-  const where = bureauName
-    ? {
-        bureau: {
-          name: { equals: bureauName, mode: "insensitive" as const },
-        },
-      }
-    : undefined;
+export async function getActivities(
+  bureauName?: string,
+  page: number = 1,
+  year?: string,
+  semester?: string,
+) {
+  const dateRange = getDateRangeFilter(year, semester);
+
+  const where = {
+    ...(bureauName
+      ? { bureau: { name: { equals: bureauName, mode: 'insensitive' as const } } }
+      : {}),
+    ...(dateRange ? { dateFrom: dateRange } : {}),
+  };
 
   const [activities, totalCount] = await Promise.all([
     prisma.activity.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
@@ -94,6 +102,7 @@ export async function getActivities(bureauName?: string, page: number = 1) {
         status: true,
         targetSectors: { include: { option: true } },
         responsiblePersons: { include: { option: true } },
+        indicators: true,
       },
     }),
     prisma.activity.count({ where }),
@@ -109,19 +118,26 @@ export async function getActivities(bureauName?: string, page: number = 1) {
 export async function deleteActivity(id: string) {
   try {
     await prisma.activity.delete({ where: { id } });
-    revalidatePath("/");
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error("deleteActivity error:", error);
-    return { success: false, error: "Failed to delete activity" };
+    console.error('deleteActivity error:', error);
+    return { success: false, error: 'Failed to delete activity' };
   }
 }
 
-export async function getActivityStats(bureauName: string) {
+export async function getActivityStats(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+) {
+  const dateRange = getDateRangeFilter(year, semester);
+
   const where = {
     bureau: {
-      name: { equals: bureauName, mode: "insensitive" as const },
+      name: { equals: bureauName, mode: 'insensitive' as const },
     },
+    ...(dateRange ? { dateFrom: dateRange } : {}),
   };
 
   const [completedCount, upcomingCount, participantsResult] = await Promise.all(
@@ -130,14 +146,14 @@ export async function getActivityStats(bureauName: string) {
         where: {
           ...where,
           status: {
-            name: { equals: "Completed", mode: "insensitive" },
+            name: { equals: 'Completed', mode: 'insensitive' },
           },
         },
       }),
       prisma.activity.count({
         where: {
           ...where,
-          dateFrom: { gt: new Date() },
+          dateFrom: { ...dateRange, gt: new Date() },
         },
       }),
       prisma.activity.aggregate({
@@ -155,37 +171,48 @@ export async function getActivityStats(bureauName: string) {
 }
 
 const DISTRICT_1_MUNICIPALITIES = [
-  "Burgos",
-  "Dapa",
-  "Del Carmen",
-  "General Luna",
-  "Pilar",
-  "San Benito",
-  "San Isidro",
-  "Santa Monica",
-  "Socorro",
+  'Burgos',
+  'Dapa',
+  'Del Carmen',
+  'General Luna',
+  'Pilar',
+  'San Benito',
+  'San Isidro',
+  'Santa Monica',
+  'Socorro',
 ];
 
 const DISTRICT_2_MUNICIPALITIES = [
-  "Alegria",
-  "Bacuag",
-  "Claver",
-  "Gigaquit",
-  "Mainit",
-  "Malimono",
-  "Placer",
-  "San Francisco",
-  "Surigao City",
-  "Sison",
-  "Tagana-an",
-  "Tubod",
+  'Alegria',
+  'Bacuag',
+  'Claver',
+  'Gigaquit',
+  'Mainit',
+  'Malimono',
+  'Placer',
+  'San Francisco',
+  'Surigao City',
+  'Sison',
+  'Tagana-an',
+  'Tubod',
 ];
 
-export async function getCompletedActivitiesByMunicipality(bureauName: string) {
+export async function getCompletedActivitiesByMunicipality(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+  projectName?: string,
+) {
+  const dateRange = getDateRangeFilter(year, semester);
+
   const completedActivities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: "insensitive" } },
-      status: { name: { equals: "Completed", mode: "insensitive" } },
+      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      status: { name: { equals: 'Completed', mode: 'insensitive' } },
+      ...(dateRange ? { dateFrom: dateRange } : {}),
+      ...(projectName
+        ? { project: { name: { equals: projectName, mode: 'insensitive' } } }
+        : {}),
     },
     include: {
       municipality: true,
@@ -234,10 +261,19 @@ export async function getCompletedActivitiesByMunicipality(bureauName: string) {
 
 export async function getGenderDemographics(
   bureauName: string,
-): Promise<{ gender: "Female" | "Male"; count: number }[]> {
+  year?: string,
+  semester?: string,
+  projectName?: string,
+): Promise<{ gender: 'Female' | 'Male'; count: number }[]> {
+  const dateRange = getDateRangeFilter(year, semester);
+
   const activities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: "insensitive" } },
+      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(dateRange ? { dateFrom: dateRange } : {}),
+      ...(projectName
+        ? { project: { name: { equals: projectName, mode: 'insensitive' } } }
+        : {}),
     },
     select: {
       femaleCount: true,
@@ -249,15 +285,26 @@ export async function getGenderDemographics(
   const totalMale = activities.reduce((sum, a) => sum + a.maleCount, 0);
 
   return [
-    { gender: "Female", count: totalFemale },
-    { gender: "Male", count: totalMale },
+    { gender: 'Female', count: totalFemale },
+    { gender: 'Male', count: totalMale },
   ];
 }
 
-export async function getModeOfImplementationBreakdown(bureauName: string) {
+export async function getModeOfImplementationBreakdown(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+  projectName?: string,
+) {
+  const dateRange = getDateRangeFilter(year, semester);
+
   const activities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: "insensitive" } },
+      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(dateRange ? { dateFrom: dateRange } : {}),
+      ...(projectName
+        ? { project: { name: { equals: projectName, mode: 'insensitive' } } }
+        : {}),
     },
     include: {
       modeOfImplementation: true,
@@ -278,7 +325,7 @@ export async function getModeOfImplementationBreakdown(bureauName: string) {
 }
 
 function getSemesterDateRange(semester: string, year: number) {
-  if (semester === "1st") {
+  if (semester === '1st') {
     return {
       start: new Date(year, 0, 1), // Jan 1
       end: new Date(year, 5, 30, 23, 59, 59), // Jun 30
@@ -290,36 +337,98 @@ function getSemesterDateRange(semester: string, year: number) {
   };
 }
 
-export async function getTargetAccomplishments(bureauName: string) {
-  const targets = await prisma.target.findMany({
-    where: {
-      bureau: { name: { equals: bureauName, mode: "insensitive" } },
-    },
+function getDateRangeFilter(year?: string, semester?: string) {
+  if (!year) return undefined;
+  const y = Number(year);
+  if (!semester) {
+    return { gte: new Date(y, 0, 1), lte: new Date(y, 11, 31, 23, 59, 59) };
+  }
+  const { start, end } = getSemesterDateRange(semester, y);
+  return { gte: start, lte: end };
+}
+
+type ActivityWhere = NonNullable<Parameters<typeof prisma.activity.count>[0]>['where'];
+
+async function measureAccomplishment(
+  where: ActivityWhere,
+  measurementType: string,
+) {
+  if (measurementType === 'participants') {
+    const result = await prisma.activity.aggregate({
+      where,
+      _sum: { totalCount: true },
+    });
+    const sum = result._sum as { totalCount: number | null };
+    return sum?.totalCount ?? 0;
+  }
+  return prisma.activity.count({ where });
+}
+
+export async function getTargetAccomplishments(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+) {
+  const districtLabel = await prisma.label.findFirst({
+    where: { name: { equals: 'District', mode: 'insensitive' } },
+    include: { options: { orderBy: { name: 'asc' } } },
+  });
+
+  const district1Id = districtLabel?.options[0]?.id;
+  const district2Id = districtLabel?.options[1]?.id;
+
+  const allTargets = await prisma.target.findMany({
+    where: { bureau: { name: { equals: bureauName, mode: 'insensitive' } } },
     include: { bureau: true, project: true },
   });
 
-  const currentYear = new Date().getFullYear();
+  const targets = allTargets.filter(
+    (t) =>
+      (!semester || t.semester === semester) &&
+      (!year || t.year === Number(year)),
+  );
 
   const results = await Promise.all(
     targets.map(async (target) => {
-      const { start, end } = getSemesterDateRange(target.semester, currentYear);
+      // Each target's accomplishment is always measured over its own
+      // year+semester window, regardless of the page filter.
+      const { start, end } = getSemesterDateRange(target.semester, target.year);
 
-      const accomplished = await prisma.activity.count({
-        where: {
-          bureau: { name: { equals: bureauName, mode: "insensitive" } },
-          ...(target.projectOptionId
-            ? { projectOptionId: target.projectOptionId }
-            : {}),
-          status: { name: { equals: "Completed", mode: "insensitive" } },
-          dateFrom: { gte: start, lte: end },
+      const baseWhere = {
+        bureau: { name: { equals: bureauName, mode: 'insensitive' as const } },
+        status: { name: { equals: 'Completed', mode: 'insensitive' as const } },
+        dateFrom: { gte: start, lte: end },
+        indicators: {
+          some: { name: { equals: target.name, mode: 'insensitive' as const } },
         },
-      });
+        ...(target.projectOptionId
+          ? { projectOptionId: target.projectOptionId }
+          : {}),
+      };
+
+      const [accomplished1st, accomplished2nd] = await Promise.all([
+        district1Id
+          ? measureAccomplishment(
+              { ...baseWhere, districtOptionId: district1Id },
+              target.measurementType,
+            )
+          : 0,
+        district2Id
+          ? measureAccomplishment(
+              { ...baseWhere, districtOptionId: district2Id },
+              target.measurementType,
+            )
+          : 0,
+      ]);
 
       return {
         indicator: target.name,
         semester: target.semester,
-        target: target.value,
-        accomplished,
+        measurementType: target.measurementType,
+        target1stDistrict: target.target1stDistrict,
+        target2ndDistrict: target.target2ndDistrict,
+        accomplished1st,
+        accomplished2nd,
         projectName: target.project?.name ?? null,
       };
     }),
@@ -327,11 +436,12 @@ export async function getTargetAccomplishments(bureauName: string) {
 
   return results;
 }
+
 interface UpdateActivityInput {
   id: string;
   activityName: string;
   activityVenue?: string;
-  indicator?: string;
+  selectedIndicators: string[];
   barangay?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -351,7 +461,7 @@ interface UpdateActivityInput {
 
 export async function updateActivity(input: UpdateActivityInput) {
   if (!input.activityName.trim()) {
-    return { success: false, error: "Activity name is required" };
+    return { success: false, error: 'Activity name is required' };
   }
 
   try {
@@ -363,12 +473,14 @@ export async function updateActivity(input: UpdateActivityInput) {
       prisma.activityResponsiblePerson.deleteMany({
         where: { activityId: input.id },
       }),
+      prisma.activityIndicator.deleteMany({
+        where: { activityId: input.id },
+      }),
       prisma.activity.update({
         where: { id: input.id },
         data: {
           activityName: input.activityName,
           activityVenue: input.activityVenue || null,
-          indicator: input.indicator || null,
           barangay: input.barangay || null,
           dateFrom: input.dateFrom ?? null,
           dateTo: input.dateTo ?? null,
@@ -392,15 +504,18 @@ export async function updateActivity(input: UpdateActivityInput) {
               optionId,
             })),
           },
+          indicators: {
+            create: input.selectedIndicators.map((name) => ({ name })),
+          },
         },
       }),
     ]);
 
-    revalidatePath("/");
+    revalidatePath('/');
     return { success: true };
   } catch (error) {
-    console.error("updateActivity error:", error);
-    return { success: false, error: "Failed to update activity" };
+    console.error('updateActivity error:', error);
+    return { success: false, error: 'Failed to update activity' };
   }
 }
 
@@ -417,20 +532,39 @@ export async function getActivityById(id: string) {
       status: true,
       targetSectors: { include: { option: true } },
       responsiblePersons: { include: { option: true } },
+      indicators: true,
     },
   });
 }
 
-export async function getOverallTargetAchievementRate(bureauName: string) {
-  const targetData = await getTargetAccomplishments(bureauName);
+export async function getOverallTargetAchievementRate(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+) {
+  const allTargetData = await getTargetAccomplishments(
+    bureauName,
+    year,
+    semester,
+  );
+
+  // Only count-based targets go into the overall rate — participant-sum
+  // targets (e.g. "Number of individuals reached") measure a different
+  // thing and can dwarf small activity-count targets, skewing the blend.
+  const targetData = allTargetData.filter(
+    (t) => t.measurementType !== 'participants',
+  );
 
   if (targetData.length === 0) {
     return null;
   }
 
-  const totalTarget = targetData.reduce((sum, t) => sum + t.target, 0);
+  const totalTarget = targetData.reduce(
+    (sum, t) => sum + t.target1stDistrict + t.target2ndDistrict,
+    0,
+  );
   const totalAccomplished = targetData.reduce(
-    (sum, t) => sum + t.accomplished,
+    (sum, t) => sum + t.accomplished1st + t.accomplished2nd,
     0,
   );
 

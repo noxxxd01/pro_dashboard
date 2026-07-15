@@ -1,6 +1,7 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useEffect, useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -8,42 +9,41 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Eye, Trash } from "lucide-react";
-import { getTargets, deleteTarget } from "@/app/actions/target-actions";
-import { toast } from "sonner";
+} from './ui/dialog';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Eye, Pencil, Trash } from 'lucide-react';
+import { getTargets, deleteTarget } from '@/app/actions/target-actions';
+import { EditTargetDialog } from './edit-target-dialog';
+import { toast } from 'sonner';
 
-interface TargetItem {
-  id: string;
-  name: string;
-  value: number;
-  semester: string;
-  bureau: {
-    id: string;
-    name: string;
-  };
-  project: {
-    id: string;
-    name: string;
-  } | null;
-}
+type TargetItem = Awaited<ReturnType<typeof getTargets>>[number];
 
 interface ViewTargetsProps {
   bureauName: string;
 }
 
 export default function ViewTargets({ bureauName }: ViewTargetsProps) {
+  const searchParams = useSearchParams();
+  const yearFilter = searchParams.get('year') ?? undefined;
+  const semesterFilter = searchParams.get('semester') ?? undefined;
+
   const [open, setOpen] = useState(false);
   const [targets, setTargets] = useState<TargetItem[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  const refreshTargets = () => {
+    getTargets(bureauName, yearFilter, semesterFilter).then(setTargets);
+  };
 
   useEffect(() => {
     if (open) {
-      getTargets(bureauName).then(setTargets);
+      refreshTargets();
     }
-  }, [open, bureauName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, bureauName, yearFilter, semesterFilter]);
 
   const handleDelete = (id: string, name: string) => {
     startTransition(async () => {
@@ -52,7 +52,7 @@ export default function ViewTargets({ bureauName }: ViewTargetsProps) {
         toast.success(`"${name}" removed`);
         setTargets((prev) => prev.filter((t) => t.id !== id));
       } else {
-        toast.error(result.error ?? "Something went wrong");
+        toast.error(result.error ?? 'Something went wrong');
       }
     });
   };
@@ -60,11 +60,11 @@ export default function ViewTargets({ bureauName }: ViewTargetsProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Eye className="w-4 h-4" /> View Targets
+        <Button variant='outline'>
+          <Eye className='w-4 h-4' /> View Targets
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className='sm:max-w-2xl max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>Targets</DialogTitle>
           <DialogDescription>
@@ -72,46 +72,80 @@ export default function ViewTargets({ bureauName }: ViewTargetsProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4">
+        <div className='flex flex-col gap-4'>
           {targets.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
+            <p className='text-sm text-muted-foreground text-center py-6'>
               No targets have been added yet.
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className='grid grid-cols-1 gap-2'>
               {targets.map((target) => (
                 <div
                   key={target.id}
-                  className="flex items-center justify-between border px-3 py-2"
+                  className='flex items-center justify-between border px-3 py-2'
                 >
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium">{target.name}</span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="secondary">Target: {target.value}</Badge>
-                      <Badge variant="outline">
-                        {target.semester === "1st"
-                          ? "1st Semester"
-                          : "2nd Semester"}
+                  <div className='flex flex-col gap-2'>
+                    <span className='text-xs font-medium'>{target.name}</span>
+                    <div className='flex items-center gap-2 flex-wrap'>
+                      <Badge variant='secondary'>
+                        1st District: {target.target1stDistrict}
                       </Badge>
-                      {target.project && (
-                        <Badge variant="outline">{target.project.name}</Badge>
-                      )}
+                      <Badge variant='secondary'>
+                        2nd District: {target.target2ndDistrict}
+                      </Badge>
+                      <Badge variant='outline'>
+                        {target.semester === '1st'
+                          ? '1st Semester'
+                          : '2nd Semester'}
+                      </Badge>
+                      <Badge variant='outline'>{target.year}</Badge>
+                      <Badge variant='outline'>
+                        {target.measurementType === 'participants'
+                          ? 'Participants'
+                          : 'Activities'}
+                      </Badge>
+                      {target.project && <Badge>{target.project.name}</Badge>}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    disabled={isPending}
-                    onClick={() => handleDelete(target.id, target.name)}
-                  >
-                    <Trash className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      disabled={isPending}
+                      onClick={() => {
+                        setEditingTargetId(target.id);
+                        setEditOpen(true);
+                      }}
+                    >
+                      <Pencil className='h-4 w-4' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      disabled={isPending}
+                      onClick={() => handleDelete(target.id, target.name)}
+                    >
+                      <Trash className='h-4 w-4 text-destructive' />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </DialogContent>
+
+      {editingTargetId && (
+        <EditTargetDialog
+          targetId={editingTargetId}
+          open={editOpen}
+          onOpenChange={(next) => {
+            setEditOpen(next);
+            if (!next) setEditingTargetId(null);
+          }}
+          onSaved={refreshTargets}
+        />
+      )}
     </Dialog>
   );
 }

@@ -1,7 +1,15 @@
 "use client";
 
 import { TrendingUp } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   Card,
@@ -62,6 +70,10 @@ export function ChartDemographics({ data }: ChartDemographicsProps) {
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+            />
+            <YAxis
+              hide
+              domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.25) || 1]}
             />
             <ChartTooltip
               cursor={false}

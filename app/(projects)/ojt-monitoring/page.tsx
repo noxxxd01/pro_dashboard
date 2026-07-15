@@ -2,7 +2,6 @@ import { getAttendanceLogs } from '@/app/actions/attendance-actions';
 import { getStudents } from '@/app/actions/student-actions';
 import OJTDashboard from '@/components/ojt-dashboard';
 import RegisterStudents from '@/components/register-student';
-import RegisterStudentsDialog from '@/components/register-students-dialog';
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,9 +22,6 @@ export default async function OJTMonitoring() {
           <OJTDashboard logs={logs} />
         </TabsContent>
         <TabsContent value='register-students' className='pl-6'>
-          <div className='flex flex-row justify-between items-center mb-4'>
-            <RegisterStudentsDialog />
-          </div>
           <RegisterStudents students={students} />
         </TabsContent>
       </Tabs>

@@ -5,7 +5,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   XAxis,
+  YAxis,
   Tooltip as RechartsTooltip,
 } from "recharts";
 
@@ -129,7 +131,7 @@ export function CompletedActivitiesChart({
           <BarChart
             accessibilityLayer
             data={chartData}
-            margin={{ left: 0, right: 0 }}
+            margin={{ left: 0, right: 0, top: 20 }}
           >
             <CartesianGrid vertical={false} />
             <XAxis
@@ -142,8 +144,19 @@ export function CompletedActivitiesChart({
               height={70}
               interval={0}
             />
+            <YAxis
+              hide
+              domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.25) || 1]}
+            />
             <RechartsTooltip content={<CustomTooltip />} />
-            <Bar dataKey="count" fill={`var(--color-${activeDistrict})`} />
+            <Bar dataKey="count" fill={`var(--color-${activeDistrict})`}>
+              <LabelList
+                position="top"
+                offset={8}
+                className="fill-foreground"
+                fontSize={11}
+              />
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>

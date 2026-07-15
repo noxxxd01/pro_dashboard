@@ -23,7 +23,7 @@ import { Calendar } from "./ui/calendar";
 import { type DateRange } from "react-day-picker";
 import { addDays, format } from "date-fns";
 import { Input } from "./ui/input";
-import type { Label as LabelType } from "@/lib/types";
+import type { Label as LabelType, OptionSummary } from "@/lib/types";
 import { getLabels } from "@/app/actions/label-action";
 import { getOptionsForLabel } from "@/lib/label-utils";
 import { useDependentOptions } from "@/hooks/use-dependent-options";
@@ -31,6 +31,7 @@ import { LabelSelectField } from "./label-select-field";
 import { MultiSelectField } from "./multi-select-field";
 import { toast } from "sonner";
 import { addActivity } from "@/app/actions/activity-actions";
+import { getIndicatorsForBureauProject } from "@/app/actions/target-actions";
 
 export default function AddDialog() {
   const [open, setOpen] = useState(false);
@@ -47,7 +48,7 @@ export default function AddDialog() {
     labels,
     "requesting agency",
   );
-  const targetSectorOptions = getOptionsForLabel(labels, "target sectors");
+  const targetSectorOptions = getOptionsForLabel(labels, "target sector");
   const modeOfImplementationOptions = getOptionsForLabel(
     labels,
     "mode of implementation",
@@ -63,7 +64,6 @@ export default function AddDialog() {
     from: new Date(),
     to: addDays(new Date(), 20),
   });
-  const [indicator, setIndicator] = useState("");
   const [activityName, setActivityName] = useState("");
   const [activityVenue, setActivityVenue] = useState("");
   const [barangay, setBarangay] = useState("");
@@ -82,6 +82,21 @@ export default function AddDialog() {
   const project = useDependentOptions(bureauOptionId);
   const municipality = useDependentOptions(districtOptionId);
 
+  // --- Indicator options depend on Bureau + Project ---
+  const [indicatorOptions, setIndicatorOptions] = useState<OptionSummary[]>(
+    [],
+  );
+
+  useEffect(() => {
+    if (!bureauOptionId) {
+      setIndicatorOptions([]);
+      return;
+    }
+    getIndicatorsForBureauProject(bureauOptionId, project.selectedId).then(
+      setIndicatorOptions,
+    );
+  }, [bureauOptionId, project.selectedId]);
+
   // --- Multi-selects ---
   const [selectedTargetSectors, setSelectedTargetSectors] = useState<string[]>(
     [],
@@ -89,6 +104,7 @@ export default function AddDialog() {
   const [selectedResponsiblePerson, setSelectedResponsiblePerson] = useState<
     string[]
   >([]);
+  const [selectedIndicators, setSelectedIndicators] = useState<string[]>([]);
 
   const toggleInArray =
     (setter: React.Dispatch<React.SetStateAction<string[]>>) =>
@@ -100,6 +116,7 @@ export default function AddDialog() {
 
   const toggleTargetSector = toggleInArray(setSelectedTargetSectors);
   const toggleResponsiblePerson = toggleInArray(setSelectedResponsiblePerson);
+  const toggleIndicator = toggleInArray(setSelectedIndicators);
 
   const [isPending, startTransition] = useTransition();
 
@@ -115,7 +132,7 @@ export default function AddDialog() {
       const result = await addActivity({
         activityName,
         activityVenue,
-        indicator,
+        selectedIndicators,
         barangay,
         dateFrom: date?.from,
         dateTo: date?.to,
@@ -135,11 +152,34 @@ export default function AddDialog() {
 
       if (result.success) {
         toast.success("Activity added");
+        resetForm();
         setOpen(false);
       } else {
         toast.error(result.error ?? "Something went wrong");
       }
     });
+  };
+
+  // Clear every field so the next "Add Data" starts blank — otherwise the
+  // previous activity's selections (indicators, sectors, persons, etc.)
+  // silently carry over into the next record.
+  const resetForm = () => {
+    setDate({ from: new Date(), to: addDays(new Date(), 20) });
+    setActivityName("");
+    setActivityVenue("");
+    setBarangay("");
+    setFemaleCount("");
+    setMaleCount("");
+    setBureauOptionId("");
+    setDistrictOptionId("");
+    setRequestingAgencyId("");
+    setModeOfImplementationId("");
+    setStatusId("");
+    project.setSelectedId("");
+    municipality.setSelectedId("");
+    setSelectedTargetSectors([]);
+    setSelectedResponsiblePerson([]);
+    setSelectedIndicators([]);
   };
 
   return (
@@ -237,12 +277,16 @@ export default function AddDialog() {
               <FieldGroup className="grid grid-cols-3 gap-4">
                 <Field>
                   <FieldLabel htmlFor="indicator">Indicator</FieldLabel>
-                  <Input
-                    id="indicator"
-                    placeholder="Enter indicator"
-                    className="bg-white"
-                    value={indicator}
-                    onChange={(e) => setIndicator(e.target.value)}
+                  <MultiSelectField
+                    options={indicatorOptions}
+                    selectedIds={selectedIndicators}
+                    onToggle={toggleIndicator}
+                    placeholder={
+                      bureauOptionId
+                        ? "Select indicators"
+                        : "Select a bureau first"
+                    }
+                    emptyLabel="No indicators available"
                   />
                 </Field>
                 <Field className="col-span-2">

@@ -6,12 +6,15 @@ import {
   getOverallTargetAchievementRate,
   getTargetAccomplishments,
 } from '@/app/actions/activity-actions';
+import { ActivityMap } from '@/components/activity-map';
 import { ChartDemographics } from '@/components/chart-demographics';
 import { ChartModeOfImplementation } from '@/components/chart-mode-implementation';
 import { CompletedActivitiesChart } from '@/components/completed-activities-chart';
 import { DataTableProjects } from '@/components/data-table-projects';
 import FilterTerm from '@/components/filter-term';
+import { TargetAnalyticsGrid } from '@/components/target-analytics-grid';
 import { TargetChartCard } from '@/components/target-chart-card';
+import { TargetVsAccomplishmentDistrictChart } from '@/components/target-vs-accomplishment';
 import { TargetsDialog } from '@/components/targets-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,12 +30,24 @@ import ViewTargets from '@/components/view-targets';
 export default async function CybersecurityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    year?: string;
+    semester?: string;
+    project?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const stats = await getActivityStats('Cybersecurity');
-  const achievementRate =
-    await getOverallTargetAchievementRate('Cybersecurity');
+  const stats = await getActivityStats(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+  );
+  const achievementRate = await getOverallTargetAchievementRate(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+  );
 
   const cybersecurityData = [
     {
@@ -64,11 +79,29 @@ export default async function CybersecurityPage({
     },
   ];
 
-  const municipalityData =
-    await getCompletedActivitiesByMunicipality('Cybersecurity');
-  const genderData = await getGenderDemographics('Cybersecurity');
-  const modeData = await getModeOfImplementationBreakdown('Cybersecurity');
-  const targetData = await getTargetAccomplishments('Cybersecurity');
+  const municipalityData = await getCompletedActivitiesByMunicipality(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+    params.project,
+  );
+  const genderData = await getGenderDemographics(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+    params.project,
+  );
+  const modeData = await getModeOfImplementationBreakdown(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+    params.project,
+  );
+  const targetData = await getTargetAccomplishments(
+    'Cybersecurity',
+    params.year,
+    params.semester,
+  );
 
   return (
     <main className='flex flex-col gap-4'>
@@ -108,26 +141,15 @@ export default async function CybersecurityPage({
         <TabsContent value='overview'>
           <DataTableProjects bureauName='Cybersecurity' searchParams={params} />
         </TabsContent>
-        <TabsContent value='map'>Map content goes here.</TabsContent>
+        <TabsContent value='map'>
+          <ActivityMap
+            district1={municipalityData.district1}
+            district2={municipalityData.district2}
+          />
+        </TabsContent>
         <TabsContent value='analytics' className='flex flex-col gap-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-            {targetData.length === 0 ? (
-              <p className='text-sm text-muted-foreground col-span-full text-center py-8'>
-                No targets set yet for this bureau.
-              </p>
-            ) : (
-              targetData.map((t, index) => (
-                <TargetChartCard
-                  key={index}
-                  indicator={t.indicator}
-                  semester={t.semester}
-                  target={t.target}
-                  accomplished={t.accomplished}
-                  projectName={t.projectName}
-                />
-              ))
-            )}
-          </div>
+          <TargetAnalyticsGrid targetData={targetData} />
+
           <CompletedActivitiesChart
             district1={municipalityData.district1}
             district2={municipalityData.district2}

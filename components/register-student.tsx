@@ -54,6 +54,7 @@ import { deleteStudent } from '@/app/actions/student-actions';
 import { toast } from 'sonner';
 import { EditStudentDialog } from './edit-student-dialog';
 import { generateDTR } from '@/app/actions/dtr-actions';
+import RegisterStudentsDialog from './register-students-dialog';
 
 interface StudentRecord {
   id: string;
@@ -154,42 +155,46 @@ export default function RegisterStudents({ students }: RegisterStudentsProps) {
 
   return (
     <div className='flex flex-col gap-4'>
-      <div className='flex flex-row items-center gap-2'>
-        <Select value={schoolFilter} onValueChange={setSchoolFilter}>
-          <SelectTrigger className='w-56'>
-            <SelectValue placeholder='School' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>All Schools</SelectItem>
-            {schools.map((school) => (
-              <SelectItem key={school} value={school}>
-                {school}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className='flex flex-row justify-between items-center gap-2'>
+        <RegisterStudentsDialog />
 
-        <Field orientation='horizontal' className='w-72'>
-          <Input
-            type='search'
-            placeholder='Search name or student number...'
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </Field>
+        <div className='flex flex-row items-center gap-2'>
+          <Select value={schoolFilter} onValueChange={setSchoolFilter}>
+            <SelectTrigger className='w-56'>
+              <SelectValue placeholder='School' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All Schools</SelectItem>
+              {schools.map((school) => (
+                <SelectItem key={school} value={school}>
+                  {school}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {hasActiveFilters && (
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => {
-              setSearch('');
-              setSchoolFilter('all');
-            }}
-          >
-            <X className='w-4 h-4' /> Clear filters
-          </Button>
-        )}
+          <Field orientation='horizontal' className='w-72'>
+            <Input
+              type='search'
+              placeholder='Search name or student number...'
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </Field>
+
+          {hasActiveFilters && (
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => {
+                setSearch('');
+                setSchoolFilter('all');
+              }}
+            >
+              <X className='w-4 h-4' /> Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
       <main className='grid grid-cols-4 gap-4'>

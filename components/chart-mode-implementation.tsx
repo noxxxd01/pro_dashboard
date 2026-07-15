@@ -30,6 +30,39 @@ interface ChartModeOfImplementationProps {
   data: ModeOfImplementationData[];
 }
 
+const RADIAN = Math.PI / 180;
+
+interface PieLabelProps {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  innerRadius: number;
+  outerRadius: number;
+  value: number;
+}
+
+function renderInsideLabel(props: unknown) {
+  const { cx, cy, midAngle, innerRadius, outerRadius, value } =
+    props as PieLabelProps;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={12}
+      fontWeight={600}
+      fill="white"
+    >
+      {value}
+    </text>
+  );
+}
+
 export function ChartModeOfImplementation({
   data,
 }: ChartModeOfImplementationProps) {
@@ -63,11 +96,17 @@ export function ChartModeOfImplementation({
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-62.5 pb-0 [&_.recharts-pie-label-text]:fill-foreground"
+          className="mx-auto aspect-square max-h-62.5 pb-0"
         >
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-            <Pie data={chartData} dataKey="count" label nameKey="mode" />
+            <Pie
+              data={chartData}
+              dataKey="count"
+              nameKey="mode"
+              label={renderInsideLabel}
+              labelLine={false}
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>

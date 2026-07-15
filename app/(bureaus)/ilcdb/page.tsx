@@ -6,6 +6,7 @@ import {
   getOverallTargetAchievementRate,
   getTargetAccomplishments,
 } from '@/app/actions/activity-actions';
+import { ActivityMap } from '@/components/activity-map';
 import { ChartDemographics } from '@/components/chart-demographics';
 import { ChartModeOfImplementation } from '@/components/chart-mode-implementation';
 import { CompletedActivitiesChart } from '@/components/completed-activities-chart';
@@ -27,12 +28,16 @@ import ViewTargets from '@/components/view-targets';
 export default async function ILCDBPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; year?: string; semester?: string }>;
 }) {
   const params = await searchParams;
-  const stats = await getActivityStats('ILCDB');
+  const stats = await getActivityStats('ILCDB', params.year, params.semester);
 
-  const achievementRate = await getOverallTargetAchievementRate('ILCDB');
+  const achievementRate = await getOverallTargetAchievementRate(
+    'ILCDB',
+    params.year,
+    params.semester,
+  );
 
   const ilcdbData = [
     {
@@ -64,10 +69,26 @@ export default async function ILCDBPage({
     },
   ];
 
-  const municipalityData = await getCompletedActivitiesByMunicipality('ILCDB');
-  const genderData = await getGenderDemographics('ILCDB');
-  const modeData = await getModeOfImplementationBreakdown('ILCDB');
-  const targetData = await getTargetAccomplishments('ILCDB');
+  const municipalityData = await getCompletedActivitiesByMunicipality(
+    'ILCDB',
+    params.year,
+    params.semester,
+  );
+  const genderData = await getGenderDemographics(
+    'ILCDB',
+    params.year,
+    params.semester,
+  );
+  const modeData = await getModeOfImplementationBreakdown(
+    'ILCDB',
+    params.year,
+    params.semester,
+  );
+  const targetData = await getTargetAccomplishments(
+    'ILCDB',
+    params.year,
+    params.semester,
+  );
 
   return (
     <main className='flex flex-col gap-4'>
@@ -107,7 +128,12 @@ export default async function ILCDBPage({
         <TabsContent value='overview'>
           <DataTableProjects bureauName='ILCDB' searchParams={params} />
         </TabsContent>
-        <TabsContent value='map'>Map content goes here.</TabsContent>
+        <TabsContent value='map'>
+          <ActivityMap
+            district1={municipalityData.district1}
+            district2={municipalityData.district2}
+          />
+        </TabsContent>
         <TabsContent value='analytics' className='flex flex-col gap-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
             {targetData.length === 0 ? (

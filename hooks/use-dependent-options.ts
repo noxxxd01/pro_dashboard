@@ -19,7 +19,13 @@ export function useDependentOptions(parentId: string) {
     getRelatedOptions(parentId).then((related) => {
       if (!cancelled) {
         setOptions(related);
-        setSelectedId("");
+        // Only clear the selection if it isn't actually among the newly
+        // fetched options — preserves a value a caller just restored (e.g.
+        // when loading an existing record into an edit form) while still
+        // resetting when the user genuinely switches the parent selection.
+        setSelectedId((prev) =>
+          related.some((o) => o.id === prev) ? prev : "",
+        );
       }
     });
 

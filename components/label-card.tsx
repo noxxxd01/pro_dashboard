@@ -92,7 +92,7 @@ export function LabelCard({ label }: { label: Label }) {
       </CardHeader>
       <CardContent className="border-t pt-2">
         {label.options.length > 0 && (
-          <div className="flex flex-col gap-2 mt-3">
+          <div className="flex flex-col gap-2 mt-3 max-h-64 overflow-y-auto custom-scrollbar pr-1">
             {label.options.map((option) => (
               <div
                 key={option.id}
