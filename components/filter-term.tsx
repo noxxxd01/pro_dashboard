@@ -23,17 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getCurrentTerm } from "@/lib/term";
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - 2 + i);
+const CURRENT_TERM = getCurrentTerm();
+const YEAR_OPTIONS = Array.from(
+  { length: 4 },
+  (_, i) => CURRENT_TERM.year - 2 + i,
+);
 
 export default function FilterTerm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const year = searchParams.get("year") ?? "";
-  const semester = searchParams.get("semester") ?? "";
-  const hasActiveFilter = Boolean(year || semester);
+  const year = searchParams.get("year") ?? String(CURRENT_TERM.year);
+  const semester = searchParams.get("semester") ?? CURRENT_TERM.semester;
+  const hasActiveFilter = Boolean(
+    searchParams.get("year") || searchParams.get("semester"),
+  );
 
   const updateParams = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -55,7 +61,7 @@ export default function FilterTerm() {
   const handleSemesterChange = (value: string) => {
     updateParams({
       semester: value,
-      year: year || String(CURRENT_YEAR),
+      year,
     });
   };
 
@@ -68,7 +74,7 @@ export default function FilterTerm() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant={hasActiveFilter ? "default" : "outline"}>
-            <FilterIcon className="h-4 w-4" />
+            <FilterIcon className="h-4 w-4" /> {semester} semester {year}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
@@ -111,7 +117,7 @@ export default function FilterTerm() {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem onSelect={clearFilter}>
-                  <X className="h-4 w-4" /> Clear filter
+                  <X className="h-4 w-4" /> Reset
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </>

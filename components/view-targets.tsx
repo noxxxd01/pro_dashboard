@@ -14,6 +14,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Eye, Pencil, Trash } from 'lucide-react';
 import { getTargets, deleteTarget } from '@/app/actions/target-actions';
+import { getCurrentTerm } from '@/lib/term';
 import { EditTargetDialog } from './edit-target-dialog';
 import { toast } from 'sonner';
 
@@ -25,8 +26,9 @@ interface ViewTargetsProps {
 
 export default function ViewTargets({ bureauName }: ViewTargetsProps) {
   const searchParams = useSearchParams();
-  const yearFilter = searchParams.get('year') ?? undefined;
-  const semesterFilter = searchParams.get('semester') ?? undefined;
+  const currentTerm = getCurrentTerm();
+  const yearFilter = searchParams.get('year') ?? String(currentTerm.year);
+  const semesterFilter = searchParams.get('semester') ?? currentTerm.semester;
 
   const [open, setOpen] = useState(false);
   const [targets, setTargets] = useState<TargetItem[]>([]);
@@ -87,12 +89,18 @@ export default function ViewTargets({ bureauName }: ViewTargetsProps) {
                   <div className='flex flex-col gap-2'>
                     <span className='text-xs font-medium'>{target.name}</span>
                     <div className='flex items-center gap-2 flex-wrap'>
-                      <Badge variant='secondary'>
-                        1st District: {target.target1stDistrict}
-                      </Badge>
-                      <Badge variant='secondary'>
-                        2nd District: {target.target2ndDistrict}
-                      </Badge>
+                      {target.measurementType === 'percentage' ? (
+                        <Badge variant='secondary'>Target: 100%</Badge>
+                      ) : (
+                        <>
+                          <Badge variant='secondary'>
+                            1st District: {target.target1stDistrict}
+                          </Badge>
+                          <Badge variant='secondary'>
+                            2nd District: {target.target2ndDistrict}
+                          </Badge>
+                        </>
+                      )}
                       <Badge variant='outline'>
                         {target.semester === '1st'
                           ? '1st Semester'
@@ -102,7 +110,9 @@ export default function ViewTargets({ bureauName }: ViewTargetsProps) {
                       <Badge variant='outline'>
                         {target.measurementType === 'participants'
                           ? 'Participants'
-                          : 'Activities'}
+                          : target.measurementType === 'percentage'
+                            ? 'Percentage (100%)'
+                            : 'Activities'}
                       </Badge>
                       {target.project && <Badge>{target.project.name}</Badge>}
                     </div>

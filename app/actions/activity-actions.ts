@@ -365,6 +365,37 @@ const DISTRICT_2_MUNICIPALITIES = [
   'Tubod',
 ];
 
+export async function getLguPenetrationRate(
+  bureauName: string,
+  year?: string,
+  semester?: string,
+) {
+  const dateRange = getDateRangeFilter(year, semester);
+
+  const completedActivities = await prisma.activity.findMany({
+    where: {
+      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      status: { name: { equals: 'Completed', mode: 'insensitive' } },
+      ...(dateRange ? { dateFrom: dateRange } : {}),
+    },
+    select: { municipality: { select: { name: true } } },
+  });
+
+  const allLgus = [...DISTRICT_1_MUNICIPALITIES, ...DISTRICT_2_MUNICIPALITIES];
+  const covered = new Set(
+    completedActivities
+      .map((a) => a.municipality?.name)
+      .filter((name): name is string => Boolean(name)),
+  );
+  const reached = allLgus.filter((name) => covered.has(name)).length;
+
+  return {
+    reached,
+    total: allLgus.length,
+    rate: Math.round((reached / allLgus.length) * 100),
+  };
+}
+
 export async function getCompletedActivitiesByMunicipality(
   bureauName: string,
   year?: string,
@@ -574,6 +605,24 @@ export async function getTargetAccomplishments(
           : {}),
       };
 
+      // Percentage indicators have a fixed 100% target: they count as fully
+      // accomplished once at least one matching activity is completed in the
+      // target's term, regardless of district.
+      if (target.measurementType === 'percentage') {
+        const count = await prisma.activity.count({ where: baseWhere });
+        const done = count > 0 ? 100 : 0;
+        return {
+          indicator: target.name,
+          semester: target.semester,
+          measurementType: target.measurementType,
+          target1stDistrict: 100,
+          target2ndDistrict: 100,
+          accomplished1st: done,
+          accomplished2nd: done,
+          projectName: target.project?.name ?? null,
+        };
+      }
+
       const [accomplished1st, accomplished2nd] = await Promise.all([
         district1Id
           ? measureAccomplishment(
@@ -723,20 +772,17 @@ export async function getOverallTargetAchievementRate(
     (t) => t.measurementType !== 'participants',
   );
 
-  if (targetData.length === 0) {
-    return null;
-  }
+  // Average each target's own completion ratio so a large-volume target (or
+  // a percentage target's fixed 100 units) can't dominate the blend.
+  const ratios = targetData
+    .map((t) => {
+      const total = t.target1stDistrict + t.target2ndDistrict;
+      if (total === 0) return null;
+      return (t.accomplished1st + t.accomplished2nd) / total;
+    })
+    .filter((r): r is number => r !== null);
 
-  const totalTarget = targetData.reduce(
-    (sum, t) => sum + t.target1stDistrict + t.target2ndDistrict,
-    0,
-  );
-  const totalAccomplished = targetData.reduce(
-    (sum, t) => sum + t.accomplished1st + t.accomplished2nd,
-    0,
-  );
+  if (ratios.length === 0) return null;
 
-  if (totalTarget === 0) return null;
-
-  return Math.round((totalAccomplished / totalTarget) * 100);
+  return Math.round((ratios.reduce((sum, r) => sum + r, 0) / ratios.length) * 100);
 }

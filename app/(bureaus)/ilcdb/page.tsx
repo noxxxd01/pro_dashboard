@@ -1,166 +1,207 @@
 import {
+  getActivitiesForCalendar,
   getActivityStats,
   getCompletedActivitiesByMunicipality,
+  getCybersecurityHighlights,
   getGenderDemographics,
+  getLguPenetrationRate,
   getModeOfImplementationBreakdown,
-  getOverallTargetAchievementRate,
   getTargetAccomplishments,
-} from '@/app/actions/activity-actions';
-import { ActivityMap } from '@/components/activity-map';
-import { ChartDemographics } from '@/components/chart-demographics';
-import { ChartModeOfImplementation } from '@/components/chart-mode-implementation';
-import { CompletedActivitiesChart } from '@/components/completed-activities-chart';
-import { DataTableProjects } from '@/components/data-table-projects';
-import FilterTerm from '@/components/filter-term';
-import { TargetChartCard } from '@/components/target-chart-card';
-import { TargetsDialog } from '@/components/targets-dialog';
-import { Button } from '@/components/ui/button';
+} from "@/app/actions/activity-actions";
+import { ActivityCalendar } from "@/components/activity-calendar";
+import { ActivityMap } from "@/components/activity-map";
+import { ChartDemographics } from "@/components/chart-demographics";
+import { ChartModeOfImplementation } from "@/components/chart-mode-implementation";
+import { CompletedActivitiesChart } from "@/components/completed-activities-chart";
+import { DataTableProjects } from "@/components/data-table-projects";
+import FilterTerm from "@/components/filter-term";
+import { getCurrentTerm } from "@/lib/term";
+import { TargetAnalyticsGrid } from "@/components/target-analytics-grid";
+import { TargetChartCard } from "@/components/target-chart-card";
+import { TargetVsAccomplishmentDistrictChart } from "@/components/target-vs-accomplishment";
+import { TargetsDialog } from "@/components/targets-dialog";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import ViewTargets from '@/components/view-targets';
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ViewTargets from "@/components/view-targets";
 
 export default async function ILCDBPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; year?: string; semester?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    year?: string;
+    semester?: string;
+    project?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const stats = await getActivityStats('ILCDB', params.year, params.semester);
-
-  const achievementRate = await getOverallTargetAchievementRate(
-    'ILCDB',
-    params.year,
-    params.semester,
+  const currentTerm = getCurrentTerm();
+  const filterYear = params.year ?? String(currentTerm.year);
+  const filterSemester = params.semester ?? currentTerm.semester;
+  const stats = await getActivityStats(
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
+  );
+  const lguPenetration = await getLguPenetrationRate(
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
+  );
+  const highlights = await getCybersecurityHighlights(
+    filterYear,
+    filterSemester,
   );
 
-  const ilcdbData = [
+  const cybersecurityData = [
     {
-      id: 'completed-activities',
-      title: 'Completed Activities',
+      id: "completed-activities",
+      title: "Completed Activities",
       value: stats.completedCount,
-      description: 'Activities completed to date.',
+      description: "Activities completed to date.",
     },
     {
-      id: 'upcoming-activities',
-      title: 'Upcoming Activities',
+      id: "upcoming-activities",
+      title: "Upcoming Activities",
       value: stats.upcomingCount,
-      description: 'Activities scheduled ahead.',
+      description: "Activities scheduled ahead.",
     },
     {
-      id: 'total-participants',
-      title: 'Total Participants',
+      id: "total-participants",
+      title: "Total Participants",
       value: stats.totalParticipants,
-      description: 'Participants reached so far.',
+      description: "Participants reached so far.",
     },
     {
-      id: 'achievement-rate',
-      title: 'Target Achievement Rate',
-      value: achievementRate !== null ? `${achievementRate}%` : '—',
-      description:
-        achievementRate !== null
-          ? 'Average progress across all set targets.'
-          : 'No targets set yet.',
+      id: "lgu-penetration-rate",
+      title: "LGU Penetration Rate",
+      value: `${lguPenetration.rate}%`,
+      description: `${lguPenetration.reached} of ${lguPenetration.total} SDN LGUs reached with activities.`,
+    },
+    {
+      id: "ciesmd-completed",
+      title: "Cybersecurity Awareness Campaigns",
+      value: highlights.ciesmdCompleted,
+      description: "Completed activities under the CIESMD project.",
+    },
+    {
+      id: "pnpki-trainings",
+      title: "PNPKI User's Trainings Conducted",
+      value: highlights.trainingsConducted,
+      description: "Trainings upon request or with partner stakeholders.",
+    },
+    {
+      id: "pnpki-awareness",
+      title: "PNPKI Awareness Campaigns",
+      value: highlights.awarenessCampaigns,
+      description: "Government entities reached with PNPKI awareness.",
+    },
+    {
+      id: "digital-certificates",
+      title: "Digital Certificates Issued",
+      value: highlights.certificatesIssued,
+      description: "Participants issued with Digital Certificates.",
     },
   ];
 
   const municipalityData = await getCompletedActivitiesByMunicipality(
-    'ILCDB',
-    params.year,
-    params.semester,
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
+    params.project,
   );
   const genderData = await getGenderDemographics(
-    'ILCDB',
-    params.year,
-    params.semester,
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
+    params.project,
   );
   const modeData = await getModeOfImplementationBreakdown(
-    'ILCDB',
-    params.year,
-    params.semester,
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
+    params.project,
   );
   const targetData = await getTargetAccomplishments(
-    'ILCDB',
-    params.year,
-    params.semester,
+    "Cybersecurity",
+    filterYear,
+    filterSemester,
   );
+  const calendarData = await getActivitiesForCalendar("Cybersecurity");
 
   return (
-    <main className='flex flex-col gap-4'>
-      <div className='flex flex-row justify-between items-end'>
+    <main className="flex flex-col gap-4">
+      <div className="flex flex-row justify-between items-end">
         <div>
-          <CardTitle className='text-xl'>ILCDB Metrics</CardTitle>
+          <CardTitle className="text-xl">Cybersecurity Bureau</CardTitle>
           <CardDescription>
             Monitor your organization's cybersecurity performance and
             compliance.
           </CardDescription>
         </div>
-        <div className='flex flex-row gap-2'>
-          <ViewTargets bureauName='ILCDB' />
+        <div className="flex flex-row gap-2">
+          <ViewTargets bureauName="Cybersecurity" />
           <TargetsDialog />
           <FilterTerm />
         </div>
       </div>
-      <div className='grid grid-cols-4 gap-4'>
-        {ilcdbData.map((item) => (
-          <Card key={item.id} className='col-span-1'>
+      <div className="grid grid-cols-4 gap-4">
+        {cybersecurityData.map((item) => (
+          <Card key={item.id} className="col-span-1">
             <CardHeader>
               <CardTitle>{item.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <CardTitle className='text-3xl'>{item.value}</CardTitle>
+              <CardTitle className="text-3xl">{item.value}</CardTitle>
               <CardDescription>{item.description}</CardDescription>
             </CardContent>
           </Card>
         ))}
       </div>
-      <Tabs defaultValue='overview' className='w-full col-span-4'>
-        <TabsList className='flex flex-row gap-2'>
-          <TabsTrigger value='overview'>Overview</TabsTrigger>
-          <TabsTrigger value='map'>Map</TabsTrigger>
-          <TabsTrigger value='analytics'>Analytics</TabsTrigger>
+      <Tabs defaultValue="analytics" className="w-full col-span-4">
+        <TabsList className="flex flex-row gap-2">
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
+          <TabsTrigger value="map">Map</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
         </TabsList>
-        <TabsContent value='overview'>
-          <DataTableProjects bureauName='ILCDB' searchParams={params} />
+        <TabsContent value="activities">
+          <DataTableProjects
+            bureauName="ILCDB"
+            searchParams={{
+              ...params,
+              year: filterYear,
+              semester: filterSemester,
+            }}
+          />
         </TabsContent>
-        <TabsContent value='map'>
+        <TabsContent value="map">
           <ActivityMap
             district1={municipalityData.district1}
             district2={municipalityData.district2}
           />
         </TabsContent>
-        <TabsContent value='analytics' className='flex flex-col gap-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-            {targetData.length === 0 ? (
-              <p className='text-sm text-muted-foreground col-span-full text-center py-8'>
-                No targets set yet for this bureau.
-              </p>
-            ) : (
-              targetData.map((t, index) => (
-                <TargetChartCard
-                  key={index}
-                  indicator={t.indicator}
-                  semester={t.semester}
-                  target={t.target}
-                  accomplished={t.accomplished}
-                  projectName={t.projectName}
-                />
-              ))
-            )}
-          </div>
+        <TabsContent value="analytics" className="flex flex-col gap-4">
+          <TargetAnalyticsGrid targetData={targetData} />
+
           <CompletedActivitiesChart
             district1={municipalityData.district1}
             district2={municipalityData.district2}
           />
-          <div className='grid grid-cols-4 gap-4'>
+          <div className="grid grid-cols-4 gap-4">
             <ChartDemographics data={genderData} />
             <ChartModeOfImplementation data={modeData} />
           </div>
+        </TabsContent>
+        <TabsContent value="calendar">
+          <ActivityCalendar activities={calendarData} />
         </TabsContent>
       </Tabs>
     </main>

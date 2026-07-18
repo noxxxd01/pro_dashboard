@@ -46,7 +46,6 @@ export function AddLabelDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Label</DialogTitle>
-          <DialogDescription>Add label</DialogDescription>
         </DialogHeader>
         <FieldGroup>
           <Field>

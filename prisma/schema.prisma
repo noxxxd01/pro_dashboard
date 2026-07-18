@@ -13,9 +13,10 @@ datasource db {
 }
 
 model Label {
-  id      String   @id @default(cuid())
-  name    String
-  options Option[]
+  id       String   @id @default(cuid())
+  name     String
+  position Int      @default(0)
+  options  Option[]
 }
 
 model Option {

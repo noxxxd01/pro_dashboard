@@ -114,8 +114,14 @@ export function TargetsDialog() {
       const result = await addTargets(
         targets.map((t) => ({
           name: t.name,
-          target1stDistrict: Number(t.target1stDistrict) || 0,
-          target2ndDistrict: Number(t.target2ndDistrict) || 0,
+          target1stDistrict:
+            t.measurementType === 'percentage'
+              ? 100
+              : Number(t.target1stDistrict) || 0,
+          target2ndDistrict:
+            t.measurementType === 'percentage'
+              ? 100
+              : Number(t.target2ndDistrict) || 0,
           semester: t.semester,
           year: Number(t.year) || CURRENT_YEAR,
           measurementType: t.measurementType || 'activities',
@@ -168,6 +174,7 @@ export function TargetsDialog() {
             <div className='flex flex-col gap-3'>
               {targets.map((target) => {
                 const projectOptions = projectOptionsByTarget[target.id] ?? [];
+                const isPercentage = target.measurementType === 'percentage';
 
                 return (
                   <div key={target.id} className='flex flex-col gap-3'>
@@ -195,7 +202,10 @@ export function TargetsDialog() {
                           id={`target-1st-${target.id}`}
                           type='number'
                           placeholder='0'
-                          value={target.target1stDistrict}
+                          value={
+                            isPercentage ? '100' : target.target1stDistrict
+                          }
+                          disabled={isPercentage}
                           onChange={(e) =>
                             updateTarget(
                               target.id,
@@ -214,7 +224,10 @@ export function TargetsDialog() {
                           id={`target-2nd-${target.id}`}
                           type='number'
                           placeholder='0'
-                          value={target.target2ndDistrict}
+                          value={
+                            isPercentage ? '100' : target.target2ndDistrict
+                          }
+                          disabled={isPercentage}
                           onChange={(e) =>
                             updateTarget(
                               target.id,
@@ -285,6 +298,9 @@ export function TargetsDialog() {
                             </SelectItem>
                             <SelectItem value='participants'>
                               Participants
+                            </SelectItem>
+                            <SelectItem value='percentage'>
+                              Percentage (100%)
                             </SelectItem>
                           </SelectContent>
                         </Select>

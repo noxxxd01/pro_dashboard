@@ -90,8 +90,14 @@ export function EditTargetDialog({
       const result = await updateTarget({
         id: targetId,
         name,
-        target1stDistrict: Number(target1stDistrict) || 0,
-        target2ndDistrict: Number(target2ndDistrict) || 0,
+        target1stDistrict:
+          measurementType === 'percentage'
+            ? 100
+            : Number(target1stDistrict) || 0,
+        target2ndDistrict:
+          measurementType === 'percentage'
+            ? 100
+            : Number(target2ndDistrict) || 0,
         semester,
         year: Number(year) || CURRENT_YEAR,
         measurementType,
@@ -139,7 +145,12 @@ export function EditTargetDialog({
                   <Input
                     id="edit-target-1st"
                     type="number"
-                    value={target1stDistrict}
+                    value={
+                      measurementType === 'percentage'
+                        ? '100'
+                        : target1stDistrict
+                    }
+                    disabled={measurementType === 'percentage'}
                     onChange={(e) => setTarget1stDistrict(e.target.value)}
                   />
                 </Field>
@@ -149,7 +160,12 @@ export function EditTargetDialog({
                   <Input
                     id="edit-target-2nd"
                     type="number"
-                    value={target2ndDistrict}
+                    value={
+                      measurementType === 'percentage'
+                        ? '100'
+                        : target2ndDistrict
+                    }
+                    disabled={measurementType === 'percentage'}
                     onChange={(e) => setTarget2ndDistrict(e.target.value)}
                   />
                 </Field>
@@ -196,6 +212,9 @@ export function EditTargetDialog({
                       <SelectItem value="activities">Activities</SelectItem>
                       <SelectItem value="participants">
                         Participants
+                      </SelectItem>
+                      <SelectItem value="percentage">
+                        Percentage (100%)
                       </SelectItem>
                     </SelectContent>
                   </Select>
