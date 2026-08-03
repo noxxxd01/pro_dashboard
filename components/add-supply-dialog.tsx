@@ -29,6 +29,7 @@ export default function AddSupplyDialog() {
   const [labels, setLabels] = useState<LabelType[]>([]);
   const [name, setName] = useState("");
   const [size, setSize] = useState("");
+  const [unit, setUnit] = useState("");
   const [categoryOptionId, setCategoryOptionId] = useState("");
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockInDate, setStockInDate] = useState<Date | undefined>(new Date());
@@ -49,6 +50,7 @@ export default function AddSupplyDialog() {
       const result = await addSupply({
         name,
         size,
+        unit,
         categoryOptionId: categoryOptionId || undefined,
         stockQuantity: Number(stockQuantity) || 0,
         stockInDate,
@@ -62,6 +64,7 @@ export default function AddSupplyDialog() {
         );
         setName("");
         setSize("");
+        setUnit("");
         setCategoryOptionId("");
         setStockQuantity("");
         setStockInDate(new Date());
@@ -105,6 +108,15 @@ export default function AddSupplyDialog() {
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
                 placeholder="e.g. A4, Long, 500ml"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="supply-unit">Unit</FieldLabel>
+              <Input
+                id="supply-unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="e.g. pcs, ream, box"
               />
             </Field>
             <Field>

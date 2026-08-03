@@ -32,7 +32,7 @@ export interface TableActionsProps {
 }
 
 export interface DataTableProjectsProps {
-  bureauName: string;
+  bureauName?: string;
   searchParams?: {
     page?: string;
     year?: string;
@@ -68,6 +68,7 @@ export interface Supply {
   id: string;
   name: string;
   size: string | null;
+  unit: string | null;
   category: { id: string; name: string } | null;
   stockQuantity: number;
   stockInDate: Date | null;

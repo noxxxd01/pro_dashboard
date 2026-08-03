@@ -355,16 +355,16 @@ export async function deleteActivity(id: string) {
 }
 
 export async function getActivityStats(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
 ) {
   const dateRange = getDateRangeFilter(year, semester);
 
   const where = {
-    bureau: {
-      name: { equals: bureauName, mode: 'insensitive' as const },
-    },
+    ...(bureauName
+      ? { bureau: { name: { equals: bureauName, mode: 'insensitive' as const } } }
+      : {}),
     ...(dateRange ? { dateFrom: dateRange } : {}),
   };
 
@@ -426,7 +426,7 @@ const DISTRICT_2_MUNICIPALITIES = [
 ];
 
 export async function getLguPenetrationRate(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
 ) {
@@ -434,7 +434,9 @@ export async function getLguPenetrationRate(
 
   const completedActivities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(bureauName
+        ? { bureau: { name: { equals: bureauName, mode: 'insensitive' } } }
+        : {}),
       status: { name: { equals: 'Completed', mode: 'insensitive' } },
       ...(dateRange ? { dateFrom: dateRange } : {}),
     },
@@ -457,7 +459,7 @@ export async function getLguPenetrationRate(
 }
 
 export async function getCompletedActivitiesByMunicipality(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
   projectName?: string,
@@ -466,7 +468,9 @@ export async function getCompletedActivitiesByMunicipality(
 
   const completedActivities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(bureauName
+        ? { bureau: { name: { equals: bureauName, mode: 'insensitive' } } }
+        : {}),
       status: { name: { equals: 'Completed', mode: 'insensitive' } },
       ...(dateRange ? { dateFrom: dateRange } : {}),
       ...(projectName
@@ -519,7 +523,7 @@ export async function getCompletedActivitiesByMunicipality(
 }
 
 export async function getGenderDemographics(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
   projectName?: string,
@@ -528,7 +532,9 @@ export async function getGenderDemographics(
 
   const activities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(bureauName
+        ? { bureau: { name: { equals: bureauName, mode: 'insensitive' } } }
+        : {}),
       ...(dateRange ? { dateFrom: dateRange } : {}),
       ...(projectName
         ? { project: { name: { equals: projectName, mode: 'insensitive' } } }
@@ -550,7 +556,7 @@ export async function getGenderDemographics(
 }
 
 export async function getModeOfImplementationBreakdown(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
   projectName?: string,
@@ -559,7 +565,10 @@ export async function getModeOfImplementationBreakdown(
 
   const activities = await prisma.activity.findMany({
     where: {
-      bureau: { name: { equals: bureauName, mode: 'insensitive' } },
+      ...(bureauName
+        ? { bureau: { name: { equals: bureauName, mode: 'insensitive' } } }
+        : {}),
+      status: { name: { equals: 'Completed', mode: 'insensitive' } },
       ...(dateRange ? { dateFrom: dateRange } : {}),
       ...(projectName
         ? { project: { name: { equals: projectName, mode: 'insensitive' } } }
@@ -624,7 +633,7 @@ async function measureAccomplishment(
 }
 
 export async function getTargetAccomplishments(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
 ) {
@@ -637,7 +646,9 @@ export async function getTargetAccomplishments(
   const district2Id = districtLabel?.options[1]?.id;
 
   const allTargets = await prisma.target.findMany({
-    where: { bureau: { name: { equals: bureauName, mode: 'insensitive' } } },
+    where: bureauName
+      ? { bureau: { name: { equals: bureauName, mode: 'insensitive' } } }
+      : {},
     include: { bureau: true, project: true },
   });
 
@@ -654,7 +665,16 @@ export async function getTargetAccomplishments(
       const { start, end } = getSemesterDateRange(target.semester, target.year);
 
       const baseWhere = {
-        bureau: { name: { equals: bureauName, mode: 'insensitive' as const } },
+        // Scoped to this target's own bureau — matters when accomplishments
+        // are aggregated across bureaus, since two bureaus can otherwise
+        // share an indicator name.
+        ...(target.bureau?.name
+          ? {
+              bureau: {
+                name: { equals: target.bureau.name, mode: 'insensitive' as const },
+              },
+            }
+          : {}),
         status: { name: { equals: 'Completed', mode: 'insensitive' as const } },
         dateFrom: { gte: start, lte: end },
         indicators: {
@@ -815,7 +835,7 @@ export async function getActivityById(id: string) {
 }
 
 export async function getOverallTargetAchievementRate(
-  bureauName: string,
+  bureauName?: string,
   year?: string,
   semester?: string,
 ) {

@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 interface SupplyInput {
   name: string;
   size?: string;
+  unit?: string;
   categoryOptionId?: string;
   stockQuantity: number;
   stockInDate?: Date;
@@ -34,6 +35,7 @@ export async function addSupply(input: SupplyInput) {
           stockQuantity: { increment: input.stockQuantity },
           // Update stockInDate to the latest restock date, if provided
           stockInDate: input.stockInDate ?? existing.stockInDate,
+          unit: input.unit || existing.unit,
         },
       });
 
@@ -45,6 +47,7 @@ export async function addSupply(input: SupplyInput) {
       data: {
         name: input.name,
         size: input.size || null,
+        unit: input.unit || null,
         categoryOptionId: input.categoryOptionId || null,
         stockQuantity: input.stockQuantity,
         stockInDate: input.stockInDate ?? null,

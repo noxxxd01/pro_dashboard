@@ -135,6 +135,7 @@ model Supply {
   id               String    @id @default(cuid())
   name             String
   size             String?
+  unit             String?
   category         Option?   @relation("SupplyCategory", fields: [categoryOptionId], references: [id])
   categoryOptionId String?
   stockQuantity    Int       @default(0)
@@ -150,7 +151,48 @@ model ReleasedSupply {
   releasedQuantity Int
   releasedDate     DateTime @default(now())
   requesteeName    String
+  requesteeDesignation String?
+  office           String?
+  division         String?
+  city             String?
+  province         String?
+  purpose          String?
+  approvedByName        String?
+  approvedByDesignation String?
+  issuedByName          String?
+  issuedByDesignation   String?
+  batchId          String?
+  unitOfMeasure    String?
+  remarks          String?
+  signedRisUrl     String?
   createdAt        DateTime @default(now())
+}
+
+model InventoryCustodianSlip {
+  id        String   @id @default(cuid())
+  office    String
+  poNumber  String?
+  province  String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  items     EquipmentItem[]
+}
+
+model EquipmentItem {
+  id                  String                 @id @default(cuid())
+  ics                 InventoryCustodianSlip @relation(fields: [icsId], references: [id], onDelete: Cascade)
+  icsId               String
+  quantity            Int
+  unit                String?
+  description         String
+  propertyNumber      String?
+  serialNumber        String?
+  unitCost            Float?
+  dateAcquired        DateTime?
+  estimatedUsefulLife String?
+  assignedTo          String?
+  remarks             String?
+  createdAt           DateTime               @default(now())
 }
 
 model Letter {

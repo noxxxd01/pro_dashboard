@@ -90,7 +90,7 @@ export function ChartModeOfImplementation({
       <CardHeader className="items-center pb-0">
         <CardTitle>Mode of Implementation</CardTitle>
         <CardDescription>
-          Breakdown of activities by delivery mode
+          Breakdown of completed activities by delivery mode
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">

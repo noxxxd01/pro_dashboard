@@ -14,7 +14,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-export default function InventoryLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;

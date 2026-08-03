@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Table,
@@ -12,7 +12,8 @@ import {
 } from "./ui/table";
 import { PaginationComponent } from "./pagination";
 import { Button } from "./ui/button";
-import { EllipsisVertical, Trash, X } from "lucide-react";
+import { Badge } from "./ui/badge";
+import { EllipsisVertical, FileText, Trash, Upload, X } from "lucide-react";
 import { Field } from "./ui/field";
 import { Input } from "./ui/input";
 import {
@@ -23,25 +24,18 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import RequestSupplyDialog from "./request-supply-dialog";
-import { deleteReleasedSupply } from "@/app/actions/released-supply-actions";
+import {
+  deleteReleaseBatch,
+  generateRIS,
+  uploadSignedRis,
+  type ReleaseBatchSummary,
+} from "@/app/actions/released-supply-actions";
+import { getStatusBadgeColor } from "@/lib/badge-colors";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-interface ReleasedSupplyItem {
-  id: string;
-  releasedQuantity: number;
-  releasedDate: Date;
-  requesteeName: string;
-  supply: {
-    id: string;
-    name: string;
-    size: string | null;
-    category: { id: string; name: string } | null;
-  };
-}
-
 interface ReleasedSupplyTableProps {
-  releases: ReleasedSupplyItem[];
+  releases: ReleaseBatchSummary[];
   currentSearch: string;
   currentPage: number;
   totalPages: number;
@@ -57,6 +51,9 @@ export default function ReleasedSupplyTable({
   const searchParams = useSearchParams();
   const [searchInput, setSearchInput] = useState(currentSearch);
   const [isPending, startTransition] = useTransition();
+  const [openingKey, setOpeningKey] = useState<string | null>(null);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const updateParams = (updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -85,15 +82,65 @@ export default function ReleasedSupplyTable({
     router.push(`?${params.toString()}`);
   };
 
-  const handleDelete = (id: string, supplyName: string) => {
+  const handleDelete = (key: string, requesteeName: string) => {
     startTransition(async () => {
-      const result = await deleteReleasedSupply(id);
+      const result = await deleteReleaseBatch(key);
       if (result.success) {
         toast.success(
-          `Release record for "${supplyName}" removed, stock restored`,
+          `RIS for "${requesteeName}" removed, stock restored`,
         );
       } else {
         toast.error(result.error ?? "Something went wrong");
+      }
+    });
+  };
+
+  const handleOpenRIS = (key: string) => {
+    setOpeningKey(key);
+    startTransition(async () => {
+      const result = await generateRIS(key);
+      setOpeningKey(null);
+      if (result.success && result.pdfBase64) {
+        const byteCharacters = atob(result.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const blob = new Blob([new Uint8Array(byteNumbers)], {
+          type: "application/pdf",
+        });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+        URL.revokeObjectURL(url);
+      } else {
+        toast.error(result.error ?? "Failed to generate RIS");
+      }
+    });
+  };
+
+  const handleUploadClick = (key: string) => {
+    fileInputRefs.current[key]?.click();
+  };
+
+  const handleFileSelected = (
+    key: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.set("file", file);
+
+    setUploadingKey(key);
+    startTransition(async () => {
+      const result = await uploadSignedRis(key, formData);
+      setUploadingKey(null);
+      if (result.success) {
+        toast.success("Signed RIS uploaded");
+      } else {
+        toast.error(result.error ?? "Failed to upload signed RIS");
       }
     });
   };
@@ -123,13 +170,13 @@ export default function ReleasedSupplyTable({
         <Table className="w-max min-w-full">
           <TableHeader className="bg-muted">
             <TableRow>
-              <TableHead className="w-25">Supply ID</TableHead>
-              <TableHead>Supply Name</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Released Quantity</TableHead>
-              <TableHead>Released Date</TableHead>
-              <TableHead>Name of Requestee</TableHead>
+              <TableHead className="w-28">RIS ID</TableHead>
+              <TableHead>Requestee</TableHead>
+              <TableHead>Approval</TableHead>
+              <TableHead>Issued</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Signed RIS</TableHead>
               <TableHead className="text-right"></TableHead>
             </TableRow>
           </TableHeader>
@@ -147,18 +194,69 @@ export default function ReleasedSupplyTable({
               </TableRow>
             ) : (
               releases.map((release) => (
-                <TableRow key={release.id}>
+                <TableRow key={release.key}>
                   <TableCell className="font-medium py-4">
-                    {release.supply.id.slice(0, 8)}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenRIS(release.key)}
+                      disabled={isPending && openingKey === release.key}
+                      className="cursor-pointer text-primary hover:underline underline-offset-2 disabled:opacity-50"
+                    >
+                      {openingKey === release.key
+                        ? "Opening..."
+                        : release.risNumber}
+                    </button>
                   </TableCell>
-                  <TableCell>{release.supply.name}</TableCell>
-                  <TableCell>{release.supply.size ?? "—"}</TableCell>
-                  <TableCell>{release.supply.category?.name ?? "—"}</TableCell>
-                  <TableCell>{release.releasedQuantity}</TableCell>
+                  <TableCell>{release.requesteeName}</TableCell>
+                  <TableCell>{release.approvedByName ?? "—"}</TableCell>
+                  <TableCell>{release.issuedByName ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={getStatusBadgeColor(release.status)}
+                    >
+                      {release.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     {format(release.releasedDate, "MMM d, yyyy")}
                   </TableCell>
-                  <TableCell>{release.requesteeName}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {release.signedRisUrl ? (
+                        <a
+                          href={release.signedRisUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary hover:underline"
+                        >
+                          <FileText className="w-4 h-4 shrink-0" /> View
+                        </a>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploadingKey === release.key}
+                          onClick={() => handleUploadClick(release.key)}
+                        >
+                          <Upload className="w-4 h-4" />
+                          {uploadingKey === release.key
+                            ? "Uploading..."
+                            : "Upload"}
+                        </Button>
+                      )}
+                      <input
+                        ref={(el) => {
+                          fileInputRefs.current[release.key] = el;
+                        }}
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileSelected(release.key, e)}
+                      />
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -171,7 +269,7 @@ export default function ReleasedSupplyTable({
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() =>
-                              handleDelete(release.id, release.supply.name)
+                              handleDelete(release.key, release.requesteeName)
                             }
                           >
                             <Trash className="w-4 h-4 text-destructive" />{" "}

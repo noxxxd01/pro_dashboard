@@ -40,6 +40,7 @@ const STATUS_COLOR_OVERRIDES: Record<string, string> = {
   pending: AMBER_STATUS,
   scheduled: AMBER_STATUS,
   upcoming: AMBER_STATUS,
+  'for signature': AMBER_STATUS,
   cancelled: RED_STATUS,
   canceled: RED_STATUS,
   postponed: RED_STATUS,

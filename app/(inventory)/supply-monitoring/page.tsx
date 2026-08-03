@@ -1,7 +1,7 @@
 import { getActivityStats } from '@/app/actions/activity-actions';
 import { getLabels } from '@/app/actions/label-action';
 import { getSupplyRecords } from '@/app/actions/record-actions';
-import { getReleasedSupplies } from '@/app/actions/released-supply-actions';
+import { getReleasedSupplyBatches } from '@/app/actions/released-supply-actions';
 import { getSupplies, getSupplyStats } from '@/app/actions/supply-actions';
 import ReleasedSupplyTable from '@/components/released-supply-table';
 import SupplyRecordTable from '@/components/supply-record-table';
@@ -75,7 +75,7 @@ export default async function SupplyMonitoring({
     releases,
     totalPages: releasedTotalPages,
     currentPage: releasedCurrentPage,
-  } = await getReleasedSupplies(releasedSearch || undefined, page);
+  } = await getReleasedSupplyBatches(releasedSearch || undefined, page);
 
   const {
     records,
@@ -113,8 +113,10 @@ export default async function SupplyMonitoring({
       </div>
       <Tabs defaultValue='supplies' className='w-full col-span-4'>
         <TabsList className='flex flex-row gap-2'>
-          <TabsTrigger value='supplies'>Supplies</TabsTrigger>
-          <TabsTrigger value='released-supplies'>Released Supplies</TabsTrigger>
+          <TabsTrigger value='supplies'>Available Supplies</TabsTrigger>
+          <TabsTrigger value='released-supplies'>
+            Requisition and Issue Slip (RIS)
+          </TabsTrigger>
           <TabsTrigger value='records'>Records</TabsTrigger>
         </TabsList>
         <TabsContent value='supplies'>

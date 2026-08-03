@@ -136,6 +136,7 @@ export default function SupplyTable({
               <TableHead className="w-25">Supply ID</TableHead>
               <TableHead>Supply Name</TableHead>
               <TableHead>Size</TableHead>
+              <TableHead>Unit</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Stock Quantity</TableHead>
               <TableHead>Stock In Date</TableHead>
@@ -162,6 +163,7 @@ export default function SupplyTable({
                   </TableCell>
                   <TableCell>{supply.name}</TableCell>
                   <TableCell>{supply.size ?? "—"}</TableCell>
+                  <TableCell>{supply.unit ?? "—"}</TableCell>
                   <TableCell>{supply.category?.name ?? "—"}</TableCell>
                   <TableCell>{supply.stockQuantity}</TableCell>
                   <TableCell>

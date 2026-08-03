@@ -24,6 +24,7 @@ import {
   Box,
   ScanBarcode,
   Logs,
+  LayoutDashboard,
 } from 'lucide-react';
 
 // This is sample data.
@@ -34,6 +35,11 @@ const data = {
     avatar: '/avatars/shadcn.jpg',
   },
   navMain: [
+    {
+      title: 'Dashboard',
+      url: '/dashboard',
+      icon: <LayoutDashboard />,
+    },
     {
       title: 'Bureaus',
       url: '#',
@@ -47,6 +53,28 @@ const data = {
         {
           title: 'ILCDB',
           url: '/ilcdb',
+          items: [
+            {
+              title: 'Tech4ED-DTC',
+              url: '/ilcdb/tech4ed-dtc',
+            },
+            {
+              title: 'EPMD',
+              url: '/ilcdb/epmd',
+            },
+            {
+              title: 'TMD',
+              url: '/ilcdb/tmd',
+            },
+            {
+              title: 'C3D2',
+              url: '/ilcdb/c3d2',
+            },
+            {
+              title: 'SPARK',
+              url: '/ilcdb/spark',
+            },
+          ],
         },
         {
           title: 'FW4A',
@@ -65,7 +93,7 @@ const data = {
         },
         {
           title: 'Equipment Monitoring',
-          url: '#',
+          url: '/equipment-monitoring',
         },
       ],
     },
